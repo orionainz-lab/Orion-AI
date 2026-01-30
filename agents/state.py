@@ -41,12 +41,25 @@ class CodeGenerationState(TypedDict, total=False):
     context: Optional[str]
     """Additional context or constraints for code generation"""
     
+    user_id: str
+    """User ID for RLS enforcement and audit logging (Phase 3)"""
+    
     # ========== PLANNING ==========
     plan: str
     """High-level execution plan from Plan node"""
     
     requirements: List[str]
     """Extracted functional requirements from the task"""
+    
+    # ========== RAG CONTEXT (Phase 3) ==========
+    rag_context: Optional[str]
+    """Retrieved context from vector search (Phase 3)"""
+    
+    rag_sources: Optional[List[Dict]]
+    """Source documents for citations (Phase 3)"""
+    
+    rag_enabled: bool
+    """Whether to use RAG for context retrieval (default: True)"""
     
     # ========== GENERATION ==========
     code: str
@@ -92,9 +105,11 @@ class CodeGenerationState(TypedDict, total=False):
 
 def create_initial_state(
     task: str,
+    user_id: str,
     language: str = "python",
     context: Optional[str] = None,
-    max_iterations: int = 3
+    max_iterations: int = 3,
+    rag_enabled: bool = True
 ) -> CodeGenerationState:
     """
     Create a properly initialized state for code generation.
@@ -111,11 +126,16 @@ def create_initial_state(
     return CodeGenerationState(
         # Input
         task=task,
+        user_id=user_id,
         language=language,
         context=context,
         # Planning
         plan="",
         requirements=[],
+        # RAG Context (Phase 3)
+        rag_context=None,
+        rag_sources=None,
+        rag_enabled=rag_enabled,
         # Generation
         code="",
         imports=[],

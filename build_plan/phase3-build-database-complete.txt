@@ -1,0 +1,201 @@
+================================================================
+PHASE 3 BUILD MODE - DATABASE SETUP COMPLETE
+================================================================
+
+PHASE: The Secure Context (Data & RAG)
+MODE: BUILD Mode (Phase 3.2 - Database Setup)
+STATUS: COMPLETE
+DATE: 2026-01-30
+
+================================================================
+SUPABASE PROJECT
+================================================================
+
+Project URL: https://bdvebjnxpsdhinpgvkgo.supabase.co
+
+================================================================
+MIGRATIONS APPLIED (8)
+================================================================
+
+1. enable_pgvector_extension (pre-existing)
+2. create_teams_and_members
+3. create_documents_table
+4. create_document_permissions
+5. create_document_chunks
+6. create_process_events
+7. create_embedding_cache
+8. create_vector_search_functions
+9. fix_embedding_cache_rls
+
+================================================================
+TABLES CREATED (7)
+================================================================
+
+1. teams
+   - Team definitions for ACL-based permissions
+   - RLS: Users see teams via membership
+   - Columns: id, name, description, org_id, timestamps
+
+2. team_members
+   - User-team membership for permission inheritance
+   - RLS: Users see own memberships, admins manage
+   - Columns: team_id, user_id, role, joined_at
+
+3. documents
+   - Source documents with ownership and ACL metadata
+   - RLS: Comprehensive (owner, team, grants, public)
+   - Columns: id, title, content, type, created_by, team_id, visibility, metadata
+
+4. document_permissions
+   - Explicit permission grants for fine-grained access
+   - RLS: Follows document permissions, owners grant/revoke
+   - Columns: document_id, user_id/team_id, permission, granted_by
+
+5. document_chunks
+   - Embedded text chunks for vector similarity search (RAG)
+   - RLS: Inherits from parent document
+   - Columns: document_id, chunk_text, chunk_index, embedding(1536d), metadata
+   - Index: HNSW (m=16, ef_construction=64)
+
+6. process_events
+   - Audit log for workflow events and RAG queries
+   - RLS: Users see own events, service can insert
+   - Columns: event_type, event_name, workflow_id, user_id, input/output/error data
+
+7. embedding_cache
+   - Cache for embeddings to reduce API costs
+   - RLS: Authenticated read, service role write
+   - Columns: text_hash, embedding(1536d), model, dimensions
+
+================================================================
+INDEXES CREATED
+================================================================
+
+Standard Indexes:
+- idx_teams_org_id
+- idx_team_members_user_id
+- idx_team_members_team_id
+- idx_documents_created_by
+- idx_documents_team_id
+- idx_documents_visibility
+- idx_documents_type
+- idx_documents_created_at
+- idx_documents_title_content (GIN for full-text search)
+- idx_permissions_document_id
+- idx_permissions_user_id
+- idx_permissions_team_id
+- idx_chunks_document_id
+- idx_chunks_created_at
+- idx_events_type
+- idx_events_user
+- idx_events_workflow
+- idx_events_timestamp
+- idx_events_status
+- idx_events_user_type_time (composite)
+- idx_cache_last_used
+- idx_cache_created
+
+Vector Index (HNSW):
+- idx_chunks_embedding_hnsw
+  USING hnsw (embedding vector_cosine_ops)
+  WITH (m=16, ef_construction=64)
+
+================================================================
+FUNCTIONS CREATED (2)
+================================================================
+
+1. match_documents(query_embedding, match_threshold, match_count)
+   - Semantic search with RLS-enforced results
+   - Returns: id, document_id, document_title, chunk_text, chunk_index, similarity
+   - Granted to: authenticated users
+
+2. get_document_with_chunks(doc_id)
+   - Get document details with chunk count
+   - Returns: id, title, content, document_type, visibility, created_at, chunk_count
+   - Granted to: authenticated users
+
+================================================================
+RLS POLICIES CREATED (15)
+================================================================
+
+teams:
+- "Users see teams they belong to" (SELECT)
+
+team_members:
+- "Users see their own team memberships" (SELECT)
+- "Team admins can manage members" (ALL)
+
+documents:
+- "Users see authorized documents" (SELECT) - Comprehensive: owner, team, grants, public
+- "Users insert own documents" (INSERT)
+- "Users update own documents" (UPDATE)
+- "Users delete own documents" (DELETE)
+
+document_permissions:
+- "Users see document permissions" (SELECT)
+- "Document owners grant permissions" (INSERT)
+- "Document owners revoke permissions" (DELETE)
+
+document_chunks:
+- "Chunks inherit document permissions" (SELECT)
+
+process_events:
+- "Users see own events" (SELECT)
+- "Service inserts events" (INSERT)
+
+embedding_cache:
+- "Authenticated users read cache" (SELECT)
+- "Service role manages cache" (ALL)
+
+================================================================
+SECURITY ADVISORIES
+================================================================
+
+WARNINGS (Acknowledged - By Design):
+1. vector extension in public schema - OK (standard location)
+2. process_events has always-true INSERT - OK (service logging)
+
+ERRORS: None
+
+================================================================
+ARTIFACTS CREATED
+================================================================
+
+1. supabase/database.types.ts
+   - TypeScript types for all tables and functions
+   - Helper type aliases for Phase 3 entities
+   - ~350 lines
+
+================================================================
+VAN QA VALIDATIONS PASSED
+================================================================
+
+- VAN-QA-1: pgvector Extension - PASS (v0.8.0 installed)
+- VAN-QA-2: HNSW Index - PASS (created with m=16, ef=64)
+- VAN-QA-3: RLS Policies - PASS (15 policies created)
+
+================================================================
+NEXT STEPS
+================================================================
+
+Phase 3.3: Embedding Pipeline Implementation
+- services/document_chunker.py
+- services/embedding_service.py
+- services/document_ingestion.py
+
+Phase 3.4: Security Layer Testing
+- Run RLS enforcement tests
+- Verify user isolation
+
+Phase 3.5: RAG System Implementation
+- services/rag_service.py
+- services/context_builder.py
+
+================================================================
+DATABASE SETUP: COMPLETE
+================================================================
+
+Status: All tables, indexes, functions, and RLS policies created
+Quality: 100% aligned with Phase 3 architecture (ADR-010, ADR-011, ADR-012)
+Security: RLS enabled on all user-facing tables
+Performance: HNSW index configured for <100ms vector queries

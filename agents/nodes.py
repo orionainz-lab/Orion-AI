@@ -25,13 +25,33 @@ logger = logging.getLogger(__name__)
 
 
 async def plan_node(state: CodeGenerationState) -> CodeGenerationState:
-    """Analyze task and create execution plan."""
+    """Analyze task and create execution plan with RAG context."""
     logger.info(f"PLAN NODE: {state.get('task', 'N/A')[:50]}...")
     
     from agents.llm_clients import call_llm_for_plan
     
     task = state.get("task", "")
     context = state.get("context", "")
+    user_id = state.get("user_id")
+    rag_enabled = state.get("rag_enabled", True)
+    
+    # Phase 3: Retrieve relevant context via RAG
+    if rag_enabled and user_id:
+        try:
+            logger.info("Retrieving RAG context...")
+            rag_context = await _retrieve_rag_context(task, user_id)
+            
+            if rag_context:
+                state["rag_context"] = rag_context.context_text
+                state["rag_sources"] = rag_context.sources
+                # Append RAG context to existing context
+                if context:
+                    context = f"{context}\n\n{rag_context.context_text}"
+                else:
+                    context = rag_context.context_text
+                logger.info(f"RAG context retrieved: {len(rag_context.sources)} sources")
+        except Exception as e:
+            logger.warning(f"RAG retrieval failed: {e}")
     
     try:
         plan_result = await call_llm_for_plan(task, context)
@@ -46,6 +66,43 @@ async def plan_node(state: CodeGenerationState) -> CodeGenerationState:
         state["requirements"] = [task]
     
     return state
+
+
+async def _retrieve_rag_context(task: str, user_id: str):
+    """
+    Retrieve relevant context via RAG (Phase 3 integration).
+    
+    This is a helper function that initializes RAG services
+    and performs semantic search.
+    """
+    import os
+    from supabase import create_client
+    from services.rag_service import RAGService
+    from services.embedding_service import EmbeddingService
+    from services.context_builder import ContextBuilder
+    
+    supabase_url = os.getenv('SUPABASE_URL')
+    supabase_key = os.getenv('SUPABASE_ANON_KEY')
+    
+    if not supabase_url or not supabase_key:
+        logger.warning("Supabase credentials not configured, skipping RAG")
+        return None
+    
+    # Initialize services
+    supabase = create_client(supabase_url, supabase_key)
+    embedding_service = EmbeddingService(supabase, primary_model="openai", fallback_to_local=True)
+    rag_service = RAGService(supabase, embedding_service, similarity_threshold=0.7)
+    context_builder = ContextBuilder(max_tokens=4000)
+    
+    # Query for relevant context
+    rag_query = f"How to {task}?"
+    rag_results = await rag_service.query(rag_query, user_id)
+    
+    if not rag_results:
+        return None
+    
+    # Build context
+    return context_builder.build_context(rag_query, rag_results, format="claude")
 
 
 async def generate_node(state: CodeGenerationState) -> CodeGenerationState:

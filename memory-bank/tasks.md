@@ -1,17 +1,23 @@
 # Memory Bank: Tasks
 
 ## Current Task
-Phase 1: The Durable Foundation - Temporal.io Infrastructure
+Phase 3: The Secure Context (Data & RAG)
 
 ## Complexity
 Level: 4 (Complex System)
-Type: Distributed Systems Infrastructure
+Type: Data Infrastructure + Security Architecture
 
 ## Phase 0 Status
 **COMPLETE** ✅ (100%) - Archived on 2026-01-30
 
 ## Phase 1 Status
-**VAN QA Mode Complete** ✅ - Ready for BUILD Mode (pending Docker start)
+**COMPLETE** ✅ (100%) - State Gap SOLVED - Archived on 2026-01-30
+
+## Phase 2 Status
+**COMPLETE** ✅ (100%) - Syntax Gap BUILT - Archived on 2026-01-30
+
+## Phase 3 Status
+**VAN Mode Complete** ✅ - Ready for PLAN Mode
 
 ### VAN Analysis Results
 - [x] Phase 1 requirements analyzed (from Plan.md)
@@ -250,22 +256,101 @@ Type: Distributed Systems Infrastructure
 - [ ] Memory Bank updated with Phase 1 completion
 - [ ] No files exceed 200 lines (code hygiene maintained)
 
+## Phase 3 VAN Analysis Results
+
+### VAN Analysis Complete ✅
+- [x] Phase 3 requirements analyzed (from Plan.md)
+- [x] Complexity Level 4 determination complete
+- [x] Prerequisites verified (Phases 0, 1, 2 complete)
+- [x] Technology stack assessment complete
+- [x] Scope breakdown created (6 workstreams, 14-20 hours)
+- [x] Risk identification complete (9 risks documented)
+- [x] ADR requirements flagged (3 architectural decisions)
+- [x] VAN analysis document created (~15KB)
+
+### Phase 3 Requirements Summary
+
+#### Core Features
+1. **Vector Embedding Pipeline**
+   - Document chunking service
+   - Embedding generation (OpenAI/Anthropic/local)
+   - Batch and streaming ingestion
+   - Storage in Supabase pgvector
+
+2. **Security Layer (RLS + ACL)**
+   - Row Level Security policies on all tables
+   - ACL metadata for document permissions
+   - Pre-LLM permission filtering
+   - User isolation testing
+
+3. **Process Intelligence System**
+   - Event logging from Temporal workflows
+   - Process event schema and storage
+   - Query interface for process mining
+   - Integration with Phase 1 workflows
+
+4. **Permissions-Aware RAG**
+   - Vector similarity search with RLS
+   - Context ranking and relevance scoring
+   - LLM context assembly
+   - Integration with Phase 2 LangGraph agents
+
+### ADR Requirements for Phase 3
+
+#### ADR-010: pgvector Configuration Strategy
+**Question**: How to configure pgvector for optimal performance?
+**Decisions Needed**:
+- HNSW index parameters (m, ef_construction)
+- Vector dimensions (384, 768, 1536, 3072)
+- Distance metric (cosine, L2, inner product)
+- Index rebuild strategy
+
+#### ADR-011: Embedding Model Selection
+**Question**: Which embedding model for text vectorization?
+**Options**:
+1. OpenAI `text-embedding-3-small` (1536d, $0.02/1M)
+2. OpenAI `text-embedding-3-large` (3072d, $0.13/1M)
+3. Local models (sentence-transformers)
+4. Anthropic embeddings (if available)
+
+#### ADR-012: ACL Data Model
+**Question**: How to model document permissions?
+**Options**:
+1. Simple user-level (user_id)
+2. Hierarchical (user_id, team_id, org_id)
+3. Role-based (permission groups)
+4. Attribute-based (ABAC policies)
+
+### Risk Register (Phase 3)
+
+| Risk ID | Description | Probability | Impact | Status |
+|---------|-------------|-------------|--------|--------|
+| R-P3-001 | pgvector not available on Supabase tier | Medium | High | Open |
+| R-P3-002 | RLS policies incorrectly configured | Medium | Critical | Open |
+| R-P3-003 | Embedding API rate limits | Medium | Medium | Open |
+| R-P3-004 | Vector search performance degradation | Medium | High | Open |
+| R-P3-005 | Permission inheritance complexity | High | High | Open |
+| R-P3-006 | RAG context quality issues | Medium | High | Open |
+| R-P3-007 | Chunking strategy suboptimal | Medium | Medium | Open |
+| R-P3-008 | Embedding dimension mismatch | Low | Medium | Open |
+| R-P3-009 | Process log volume overwhelming | Medium | Medium | Open |
+
 ## Next Steps
 
 ### Immediate (VAN → PLAN Transition)
 1. **Enter PLAN Mode**: Comprehensive architectural planning
-2. **Document Architecture**: Create `build_plan/phase1-architecture.md`
-3. **Make ADR Decisions**: ADR-004, ADR-005, ADR-006
-4. **Design Docker Setup**: Complete docker-compose.yml design
-5. **Design Workflow Patterns**: Detailed workflow architecture
+2. **Document Architecture**: Create `build_plan/phase3-architecture.md`
+3. **Make ADR Decisions**: ADR-010, ADR-011, ADR-012
+4. **Design Database Schema**: Vector tables, process events, RLS policies
+5. **Design Services**: Embedding pipeline, RAG system, process logger
+6. **Design Integration**: Connect to Phase 1 (Temporal) and Phase 2 (LangGraph)
 
 ### After PLAN Mode
-1. **Transition to CREATIVE Mode**: Design specific components
-2. **Transition to VAN QA Mode**: Validate technology choices
-3. **Transition to BUILD Mode**: Implement infrastructure
-4. **Testing & Validation**: Execute chaos tests
-5. **REFLECT Mode**: Document lessons learned
-6. **ARCHIVE Mode**: Preserve Phase 1 knowledge
+1. **Transition to VAN QA Mode**: Validate pgvector, RLS, embeddings
+2. **Transition to BUILD Mode**: Implement vector pipeline and RAG
+3. **Testing & Validation**: RLS tests, chaos tests, integration tests
+4. **REFLECT Mode**: Document lessons learned
+5. **ARCHIVE Mode**: Preserve Phase 3 knowledge
 
 ## Notes
 
