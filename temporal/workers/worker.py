@@ -2,8 +2,8 @@
 Temporal Worker Process
 Connects to Temporal Server and executes workflows/activities
 
-Phase 1: Monolithic worker (all workflows + activities)
-Phase 2+: Will split into specialized workers per domain
+Phase 1: Durability foundation (DurableDemoWorkflow, ApprovalWorkflow)
+Phase 2: AI code generation (CodeGenerationWorkflow)
 """
 
 import asyncio
@@ -19,6 +19,8 @@ from temporalio.worker import Worker
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from temporal.config import temporal_config
+
+# Phase 1 workflows and activities
 from temporal.workflows.durable_demo import DurableDemoWorkflow
 from temporal.workflows.approval_workflow import ApprovalWorkflow
 from temporal.activities.test_activities import (
@@ -29,6 +31,10 @@ from temporal.activities.test_activities import (
     send_notification,
     long_running_task,
 )
+
+# Phase 2 workflows and activities
+from agents.workflows import CodeGenerationWorkflow
+from agents.activities import execute_code_generation, verify_code_syntax
 
 # Configure logging
 logging.basicConfig(
@@ -52,10 +58,10 @@ async def create_worker(client: Client) -> Worker:
     """
     Create and configure worker.
     
-    Phase 1: Single monolithic worker
+    Phase 1 + 2: Single monolithic worker
     - Task queue: "default"
-    - All workflows registered
-    - All activities registered
+    - Phase 1: DurableDemoWorkflow, ApprovalWorkflow
+    - Phase 2: CodeGenerationWorkflow
     
     Args:
         client: Connected Temporal client
@@ -63,23 +69,43 @@ async def create_worker(client: Client) -> Worker:
     Returns:
         Configured Worker instance
     """
+    # Combine Phase 1 and Phase 2 workflows
+    workflows = [
+        # Phase 1
+        DurableDemoWorkflow,
+        ApprovalWorkflow,
+        # Phase 2
+        CodeGenerationWorkflow,
+    ]
+    
+    # Combine Phase 1 and Phase 2 activities
+    activities = [
+        # Phase 1 activities
+        process_step,
+        log_event,
+        process_request,
+        record_decision,
+        send_notification,
+        long_running_task,
+        # Phase 2 activities
+        execute_code_generation,
+        verify_code_syntax,
+    ]
+    
     worker = Worker(
         client,
         task_queue=temporal_config.task_queue,
-        workflows=[DurableDemoWorkflow, ApprovalWorkflow],
-        activities=[
-            process_step,
-            log_event,
-            process_request,
-            record_decision,
-            send_notification,
-            long_running_task,
-        ],
+        workflows=workflows,
+        activities=activities,
     )
     
     logger.info(f"Worker created on task_queue='{temporal_config.task_queue}'")
-    logger.info(f"Registered workflows: DurableDemoWorkflow, ApprovalWorkflow")
-    logger.info(f"Registered activities: 6 total")
+    logger.info(f"Registered workflows: {len(workflows)} total")
+    logger.info(f"  Phase 1: DurableDemoWorkflow, ApprovalWorkflow")
+    logger.info(f"  Phase 2: CodeGenerationWorkflow")
+    logger.info(f"Registered activities: {len(activities)} total")
+    logger.info(f"  Phase 1: 6 activities")
+    logger.info(f"  Phase 2: 2 activities (execute_code_generation, verify_code_syntax)")
     
     return worker
 

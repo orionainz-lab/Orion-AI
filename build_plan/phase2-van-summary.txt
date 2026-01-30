@@ -1,0 +1,208 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                  PHASE 2 VAN ANALYSIS: THE RELIABLE BRAIN                ║
+║                       Solving the Syntax Gap                              ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 MISSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Build AI agents that generate SYNTACTICALLY VALID CODE on first try
+   
+   Problem: AI models produce syntax errors 15-30% of the time
+   Solution: LangGraph cyclic reasoning + Python AST verification
+   Target: 95%+ first-attempt success rate
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🏗️ ARCHITECTURE (High-Level)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ┌──────────────────────────────────────────────────────┐
+   │  LangGraph Cyclic Reasoning Loop                     │
+   │  (runs as Temporal Workflow - inherits durability)   │
+   │                                                        │
+   │  ┌──────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐│
+   │  │ Plan │─▶│ Generate │─▶│ Verify   │─▶│ Correct  ││
+   │  └──────┘  └──────────┘  └──────────┘  └──────────┘│
+   │     │           ▲            │ (AST)         │       │
+   │     │           │            ├─ Valid? ──▶ END      │
+   │     │           │            └─ Invalid? ───┘       │
+   │     └───────────┴─────────────────────────────────  │
+   └──────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 COMPONENTS (6 Total)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   1. State Schema (agents/state.py, ~80 lines)
+      ├─ TypedDict for LangGraph state
+      ├─ Fields: task, plan, code, errors, iteration
+      └─ Type-safe, observable
+
+   2. Reasoning Nodes (agents/reasoning_nodes.py, ~180 lines)
+      ├─ plan_node: Analyze task (LLM)
+      ├─ generate_node: Generate code (LLM)
+      ├─ verify_node: AST parse (Activity)
+      ├─ correct_node: Generate feedback (Rule-based/LLM)
+      └─ Conditional edge: valid → END, invalid → correct
+
+   3. AST Verifier (verification/ast_verifier.py, ~150 lines)
+      ├─ verify_python_syntax: ast.parse() wrapper
+      ├─ validate_imports: Check stdlib/installed
+      ├─ extract_error_details: Structure errors
+      └─ All Temporal activities (idempotent)
+
+   4. LangGraph Workflow (agents/code_generation_workflow.py, ~180 lines)
+      ├─ Temporal @workflow.defn
+      ├─ Builds LangGraph graph
+      ├─ Executes reasoning loop
+      └─ Returns valid code or errors
+
+   5. LLM Clients (agents/llm_clients.py, ~120 lines)
+      ├─ Claude Sonnet 4.5 client
+      ├─ Gemini 2.0 Flash client (optional)
+      ├─ Token counting
+      └─ Rate limit handling
+
+   6. Config Extension (agents/config.py, ~60 lines)
+      ├─ LangGraphConfig dataclass
+      ├─ LLMConfig dataclass
+      └─ Reuses Phase 1 pattern
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 TECHNOLOGY STACK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   NEW (Phase 2):
+   ├─ langgraph (>= 0.2.0)          - Cyclic reasoning framework
+   ├─ langchain-core (>= 0.3.0)     - LangGraph dependency
+   ├─ langchain-anthropic           - Claude integration
+   ├─ langchain-google-genai        - Gemini integration
+   ├─ Python ast (built-in)         - Syntax verification
+   ├─ black (>= 24.0)               - Code formatting validation
+   └─ isort (>= 5.13)               - Import validation
+
+   INHERITED (Phase 1):
+   ├─ Temporal.io                   - Workflow engine ✅
+   ├─ Docker Compose                - Service orchestration ✅
+   ├─ pytest                        - Testing framework ✅
+   └─ psutil                        - Process management ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Functional:
+   ✓ FR-P2-001: LangGraph cyclic reasoning (4 nodes, conditional edges)
+   ✓ FR-P2-002: Python AST verification (syntax errors)
+   ✓ FR-P2-003: Import validation (stdlib + installed)
+   ✓ FR-P2-004: Error-to-feedback translation
+   ✓ FR-P2-005: Temporal integration (workflow + activities)
+   ✓ FR-P2-006: Chaos testing (reasoning loop recovery)
+
+   Non-Functional:
+   ✓ NFR-P2-001: Performance (<30s per loop, <100ms AST)
+   ✓ NFR-P2-002: Code quality (200-line rule, type hints)
+   ✓ NFR-P2-003: Observability (logs, Temporal UI)
+   ✓ NFR-P2-004: Extensibility (pluggable verifiers)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ RISKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   HIGH PRIORITY:
+   ⚠️ R-P2-001: LangGraph learning curve
+      Mitigation: VAN QA hello-world before PLAN
+   
+   ⚠️ R-P2-004: Infinite reasoning loops
+      Mitigation: Hard limit of 3 iterations
+   
+   ⚠️ R-P2-005: LangGraph-Temporal integration
+      Mitigation: VAN QA proof-of-concept
+
+   MEDIUM PRIORITY:
+   ⚠️ R-P2-002: AST parser edge cases
+      Mitigation: Comprehensive test suite (100+ samples)
+   
+   ⚠️ R-P2-003: LLM API rate limits
+      Mitigation: Exponential backoff, token budgeting
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ ACCEPTANCE CRITERIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   MUST HAVE:
+   ☐ LangGraph graph (4 nodes: plan, generate, verify, correct)
+   ☐ Conditional edge routing (valid → END, invalid → loop)
+   ☐ Python AST verification activity
+   ☐ Integration with Temporal (workflow + activities)
+   ☐ Simple test: Generate "Hello World" function (3 iterations max)
+   ☐ Chaos test: Kill during verification → Loop resumes
+   ☐ All files ≤ 200 lines
+   ☐ 95%+ first-attempt success rate (20-task test suite)
+
+   SHOULD HAVE:
+   ☐ Import validation
+   ☐ Error-to-feedback translation
+   ☐ Multi-LLM support (Claude + Gemini)
+   ☐ Token usage tracking
+   ☐ Comprehensive test suite (20+ tasks)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️ TIME ESTIMATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Based on Phase 1 learnings:
+   
+   Sub-Phase 2.1: LangGraph Hello World       2-3h (High confidence)
+   Sub-Phase 2.2: AST Verification            2-3h (High confidence)
+   Sub-Phase 2.3: LangGraph-Temporal          2-3h (Medium confidence)
+   Sub-Phase 2.4: Cyclic Reasoning            2-3h (Medium confidence)
+   Sub-Phase 2.5: LLM Integration             1-2h (High confidence)
+   Sub-Phase 2.6: Chaos Testing               1-2h (High confidence)
+   
+   TOTAL: 8-12 hours (vs 12-18h naive estimate)
+   
+   Expected Savings: 50-60% (based on Phase 1 ROI of 72%)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 PHASE 1 LESSONS APPLIED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   1. ✅ Always run VAN QA before BUILD
+      Application: Test LangGraph + AST + Temporal BEFORE planning
+   
+   2. ✅ Plan for utils/ extraction at 150 lines
+      Application: Create utils/ast_utils.py, utils/langgraph_utils.py
+   
+   3. ✅ Chaos testing framework is reusable
+      Application: Use utils/chaos_utils.py for reasoning loop tests
+   
+   4. ✅ Integration tests beat unit tests
+      Application: Focus on end-to-end LangGraph + Temporal tests
+   
+   5. ✅ Docker first, code second
+      Application: Add Redis to docker-compose.yml in VAN QA if needed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 PENDING DECISIONS (For PLAN Mode)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ADR-007: LangGraph Integration Pattern
+   ├─ Option 1: LangGraph AS Temporal Workflow (Recommended)
+   ├─ Option 2: LangGraph OUTSIDE Temporal
+   └─ Decision: Pending PLAN mode
+
+   ADR-008: LLM Provider Strategy
+   ├─ Option 1: Claude Sonnet 4.5 only
+   ├─ Option 2: Multi-LLM (Claude + 
