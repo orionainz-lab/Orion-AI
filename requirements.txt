@@ -1,0 +1,55 @@
+# Phase 1: The Durable Foundation - Python Dependencies
+# Last Updated: 2026-01-30
+
+# ===========================================
+# TEMPORAL.IO WORKFLOW ENGINE
+# ===========================================
+# Primary workflow execution engine - solves "State Gap"
+temporalio>=1.21.0
+
+# ===========================================
+# WEB FRAMEWORK (Future API endpoints)
+# ===========================================
+# FastAPI for REST endpoints (signal sending, workflow management)
+fastapi>=0.128.0
+uvicorn>=0.30.0
+
+# ===========================================
+# DATA VALIDATION
+# ===========================================
+# Pydantic for type-safe data models
+pydantic>=2.8.0
+
+# ===========================================
+# DATABASE (Supabase Integration)
+# ===========================================
+# Supabase client for business data persistence
+supabase>=2.0.0
+
+# ===========================================
+# CONFIGURATION
+# ===========================================
+# Environment variable management
+python-dotenv>=1.0.0
+
+# ===========================================
+# SYSTEM UTILITIES
+# ===========================================
+# Process management for chaos testing
+psutil>=5.9.0
+
+# ===========================================
+# TESTING
+# ===========================================
+# Testing framework
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+
+# ===========================================
+# OPTIONAL: Development Tools
+# ===========================================
+# HTTP client for testing
+httpx>=0.27.0
+
+# Async utilities
+aiofiles>=23.0.0

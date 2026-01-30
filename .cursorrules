@@ -1,0 +1,74 @@
+# Cursor Rules: Adaptive AI Integration Platform
+
+## Project Context
+Building a "Self-Driving Enterprise" platform with Agentic AI capabilities, solving the Three Gaps: State, Syntax, and Context.
+
+## Core Development Principles
+
+### 1. Code Hygiene - The 200-Line Rule
+**MANDATORY**: Any file exceeding 200 lines MUST be immediately refactored into `services/` or `utils/`.
+
+### 2. Zero Tech Debt Policy
+- Modular code enforced from Day 1
+- No temporary solutions or shortcuts
+- Immediate refactoring when complexity increases
+
+### 3. Technology Stack Adherence
+- **Backend**: Python + FastAPI (for AST parsing and AI libraries)
+- **Database**: Supabase (PostgreSQL + pgvector + RLS)
+- **Orchestration**: Temporal.io (durable execution)
+- **Agents**: LangGraph (cyclic reasoning)
+- **Frontend**: Next.js + AG Grid (Matrix UI)
+- **Verification**: Python `ast` module (syntax validation)
+
+### 4. Security First
+- **RLS**: All user-facing tables MUST have Row Level Security
+- **Permissions-Aware RAG**: Context filtered by user permissions
+- **AST Verification**: All AI-generated code validated before execution
+- **ACL Enforcement**: Access control at query level
+
+### 5. Documentation Requirements
+- **Roadmap**: Maintain `build_plan/roadmap.md` with task check-offs
+- **Chain of Custody**: Every completed task must be documented
+- **Atomic Tasks**: Break work into small, isolated units
+
+## Role-Based Development
+
+**Location**: `.cursor/rules/*.md` (10 specialized AI assistance files)
+
+When working on different parts of the system, adopt these personas:
+1. **Distributed Systems Eng** (`.cursor/rules/distributed-systems.md`): Temporal.io, Docker, state persistence
+2. **AI Orchestration Eng** (`.cursor/rules/ai-orchestration.md`): LangGraph, Python, Plan/Act/Observe loops
+3. **Verification Specialist** (`.cursor/rules/verification.md`): Python `ast`, syntax validation middleware
+4. **Senior Frontend Eng** (`.cursor/rules/frontend.md`): Next.js, AG Grid, Matrix UI
+5. **Real-Time Systems Eng** (`.cursor/rules/realtime-systems.md`): WebSockets, Supabase Realtime
+6. **ML Engineer** (`.cursor/rules/ml-engineer.md`): Gorilla/xLAM integration, function calling
+7. **Security Engineer** (`.cursor/rules/security.md`): RLS, OAuth2, ACLs
+8. **Backend API Architect** (`.cursor/rules/backend-api.md`): Pydantic, FastAPI, Unified Schema
+9. **SDET** (`.cursor/rules/sdet.md`): Chaos testing, resilience validation
+10. **Documentation Specialist** (`.cursor/rules/documentation.md`): ADRs, Memory Bank, technical writing
+
+**Usage**: Cursor AI automatically loads relevant role context based on file location and task type.
+
+## File Structure
+```
+/
+├── services/           # Business logic (max 200 lines per file)
+├── utils/              # Helper functions (max 200 lines per file)
+├── build_plan/         # Roadmap and planning documents
+├── memory-bank/        # AI context and project memory
+├── temporal/           # Workflow definitions
+├── connectors/         # API integration adapters
+└── frontend/           # Next.js application
+```
+
+## Testing Standards
+- **Unit Tests**: Required for all business logic
+- **Integration Tests**: Required for API endpoints and workflows
+- **Chaos Tests**: Required for Temporal workflows (simulate crashes)
+- **Coverage**: Minimum 80% for production code
+
+## Commit Standards
+- Follow Conventional Commits specification
+- Reference task IDs in commit messages
+- Squash commits before merging to main

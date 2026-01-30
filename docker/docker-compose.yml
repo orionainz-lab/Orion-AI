@@ -1,0 +1,109 @@
+# Phase 1: Temporal.io Infrastructure
+# Docker Compose configuration for local development
+#
+# Usage:
+#   docker-compose up -d        # Start all services in background
+#   docker-compose down         # Stop and remove containers
+#   docker-compose logs -f      # Follow logs
+#   docker-compose ps           # Check status
+#
+# Services:
+#   - temporal: Temporal Server (port 7233)
+#   - postgresql: Database for Temporal persistence (port 5432)
+#   - temporal-ui: Web UI for workflow management (port 8080)
+#
+# Last Updated: 2026-01-30
+
+version: "3.8"
+
+services:
+  # ===========================================
+  # PostgreSQL Database
+  # Temporal's persistence layer
+  # ===========================================
+  postgresql:
+    image: postgres:15-alpine
+    container_name: temporal-postgresql
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    ports:
+      - "5432:5432"
+    volumes:
+      - temporal-postgresql-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - temporal-network
+
+  # ===========================================
+  # Temporal Server
+  # Workflow execution engine
+  # ===========================================
+  temporal:
+    image: temporalio/auto-setup:latest
+    container_name: temporal-server
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgresql
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
+    ports:
+      - "7233:7233"
+    volumes:
+      - ./temporal-config:/etc/temporal/config/dynamicconfig
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "temporal:7233", "cluster", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - temporal-network
+
+  # ===========================================
+  # Temporal Web UI
+  # Workflow visualization and management
+  # ===========================================
+  temporal-ui:
+    image: temporalio/ui:latest
+    container_name: temporal-ui
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - temporal-network
+
+# ===========================================
+# Volumes
+# Persistent storage for database
+# ===========================================
+volumes:
+  temporal-postgresql-data:
+    driver: local
+
+# ===========================================
+# Networks
+# Isolated network for Temporal services
+# ===========================================
+networks:
+  temporal-network:
+    driver: bridge
+    name: temporal-network
