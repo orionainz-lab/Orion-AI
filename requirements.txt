@@ -65,3 +65,21 @@ httpx>=0.27.0
 
 # Async utilities
 aiofiles>=23.0.0
+
+# ===========================================
+# PHASE 5: CONNECTOR FRAMEWORK
+# ===========================================
+# HTTP client for API connectors
+httpx>=0.28.0
+
+# Email validation for pydantic
+email-validator>=2.3.0
+
+# JWT handling for credentials
+python-jose[cryptography]>=3.5.0
+
+# File upload support
+python-multipart>=0.0.22
+
+# HTTP mocking for tests
+responses>=0.25.0
