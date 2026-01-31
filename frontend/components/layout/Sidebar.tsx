@@ -7,7 +7,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Grid3x3, Activity, Settings, X } from 'lucide-react'
+import { Home, Grid3x3, Activity, Settings, X, Wrench, Store } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarProps {
@@ -19,6 +19,8 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Matrix Grid', href: '/matrix', icon: Grid3x3 },
   { name: 'Analytics', href: '/analytics', icon: Activity },
+  { name: 'Marketplace', href: '/connectors/marketplace', icon: Store },
+  { name: 'Builder', href: '/connectors/builder', icon: Wrench },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
@@ -86,7 +88,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
           <div className="text-xs text-gray-500 text-center">
             <p>Orion AI v1.0.0</p>
-            <p className="mt-1">Phase 4: Command Center</p>
+            <p className="mt-1">Phase 6B: Advanced Features</p>
           </div>
         </div>
       </aside>

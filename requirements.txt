@@ -83,3 +83,16 @@ python-multipart>=0.0.22
 
 # HTTP mocking for tests
 responses>=0.25.0
+
+# ===========================================
+# PHASE 6B: ADVANCED FEATURES
+# ===========================================
+# Anthropic Claude for LLM schema mapping
+anthropic>=0.48.0
+
+# Jinja2 for code templates (connector builder)
+jinja2>=3.2.0
+
+# Chart.js support (optional, frontend only)
+# charting dependencies handled in frontend/package.json
+

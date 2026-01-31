@@ -1,0 +1,30 @@
+# Code Owners
+# Each line is a file pattern followed by one or more owners
+
+# Global owners
+*                                   @team-orion-ai
+
+# CI/CD workflows require DevOps team review
+/.github/workflows/*                @team-devops
+
+# Frontend code
+/frontend/*                         @team-frontend
+
+# Backend API
+/api/*                             @team-backend
+/connectors/*                      @team-backend
+
+# Infrastructure
+/docker/*                          @team-devops
+/config/*                          @team-devops
+/scripts/deploy/*                  @team-devops
+
+# Database & Migrations
+/supabase/migrations/*             @team-database
+
+# Temporal workflows
+/temporal/*                        @team-backend
+
+# Security-sensitive files
+/.env.example                      @team-security
+/config/environments/*             @team-security

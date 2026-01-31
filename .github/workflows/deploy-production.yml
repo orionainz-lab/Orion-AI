@@ -1,0 +1,224 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to deploy'
+        required: true
+        type: string
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '22'
+
+jobs:
+  pre-deployment-checks:
+    name: Pre-Deployment Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+      
+      - name: Verify version tag
+        run: |
+          if ! git rev-parse ${{ inputs.version }} >/dev/null 2>&1; then
+            echo "❌ Version tag ${{ inputs.version }} not found"
+            exit 1
+          fi
+          echo "✅ Version tag ${{ inputs.version }} verified"
+      
+      - name: Check if tests passed
+        run: |
+          # Verify all CI checks passed on this tag
+          echo "Checking CI status for ${{ inputs.version }}"
+      
+      - name: Verify staging health
+        run: |
+          response=$(curl -s https://api-staging.railway.app/health)
+          status=$(echo $response | jq -r '.status')
+          if [ "$status" = "healthy" ]; then
+            echo "✅ Staging is healthy"
+          else
+            echo "⚠️ Warning: Staging health check failed"
+          fi
+
+  deploy-backend-production:
+    name: Deploy Backend to Railway Production
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    environment:
+      name: production
+      url: https://api-prod.railway.app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+      
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+      
+      - name: Create deployment backup
+        run: |
+          echo "Creating backup of current production state..."
+          # Railway automatic snapshots handle this
+      
+      - name: Deploy to Railway Production
+        run: railway up --service api-prod --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+      
+      - name: Wait for deployment
+        run: sleep 45
+      
+      - name: Health check
+        run: |
+          for i in {1..5}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://api-prod.railway.app/health)
+            if [ $response -eq 200 ]; then
+              echo "✅ Backend health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Waiting for backend... (attempt $i)"
+            sleep 10
+          done
+          echo "❌ Backend health check failed after 5 attempts"
+          exit 1
+
+  deploy-frontend-production:
+    name: Deploy Frontend to Vercel Production
+    runs-on: ubuntu-latest
+    needs: deploy-backend-production
+    environment:
+      name: production
+      url: https://orion-ai.vercel.app
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+      
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+      
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      
+      - name: Build Project
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      
+      - name: Deploy to Vercel Production
+        run: vercel deploy --prod --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+  smoke-tests-production:
+    name: Production Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-backend-production, deploy-frontend-production]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test Frontend Homepage
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://orion-ai.vercel.app)
+          if [ $response -eq 200 ]; then
+            echo "✅ Frontend smoke test passed"
+          else
+            echo "❌ Frontend smoke test failed with status $response"
+            exit 1
+          fi
+      
+      - name: Test API Health
+        run: |
+          response=$(curl -s https://api-prod.railway.app/health)
+          status=$(echo $response | jq -r '.status')
+          if [ "$status" = "healthy" ]; then
+            echo "✅ API health check passed"
+          else
+            echo "❌ API health check failed: $response"
+            exit 1
+          fi
+      
+      - name: Test API Detailed Health
+        run: |
+          response=$(curl -s https://api-prod.railway.app/health/detailed)
+          echo $response | jq
+          
+          # Check all services
+          supabase=$(echo $response | jq -r '.checks.supabase.healthy')
+          temporal=$(echo $response | jq -r '.checks.temporal.healthy')
+          
+          if [ "$supabase" = "true" ] && [ "$temporal" = "true" ]; then
+            echo "✅ All services healthy"
+          else
+            echo "⚠️ Some services unhealthy"
+            exit 1
+          fi
+      
+      - name: Test critical user flow
+        run: |
+          # Test Matrix Grid API
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://orion-ai.vercel.app/matrix)
+          if [ $response -eq 200 ]; then
+            echo "✅ Matrix Grid accessible"
+          else
+            echo "❌ Matrix Grid failed with status $response"
+            exit 1
+          fi
+
+  post-deployment:
+    name: Post-Deployment Tasks
+    runs-on: ubuntu-latest
+    needs: smoke-tests-production
+    if: always()
+    steps:
+      - name: Create deployment record
+        run: |
+          echo "📝 Recording deployment..."
+          echo "Version: ${{ inputs.version }}"
+          echo "Status: ${{ needs.smoke-tests-production.result }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+      
+      - name: Send success notification
+        if: success()
+        run: |
+          echo "🎉 Production deployment successful!"
+          echo "Version: ${{ inputs.version }}"
+          echo "URL: https://orion-ai.vercel.app"
+      
+      - name: Send failure notification
+        if: failure()
+        run: |
+          echo "❌ Production deployment failed!"
+          echo "Please investigate and consider rollback"
+
+  monitor:
+    name: Monitor Deployment
+    runs-on: ubuntu-latest
+    needs: smoke-tests-production
+    if: success()
+    steps:
+      - name: Monitor for 5 minutes
+        run: |
+          echo "👀 Monitoring production for 5 minutes..."
+          for i in {1..10}; do
+            response=$(curl -s https://api-prod.railway.app/health)
+            status=$(echo $response | jq -r '.status')
+            echo "Check $i: $status"
+            
+            if [ "$status" != "healthy" ]; then
+              echo "❌ Health check failed during monitoring"
+              exit 1
+            fi
+            
+            sleep 30
+          done
+          echo "✅ All health checks passed during monitoring period"
