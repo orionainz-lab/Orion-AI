@@ -29,8 +29,8 @@ export function ProposalModal() {
 
   if (!modalOpen || !proposal) return null
 
-  const metadata = proposal.event_metadata as any
-  const status = metadata?.status || 'unknown'
+  const metadata = proposal.metadata as any
+  const status = proposal.status || 'unknown'
 
   return (
     <div

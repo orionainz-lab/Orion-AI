@@ -16,14 +16,32 @@ Since we're using a cloud Supabase instance with RLS, you'll need to seed test d
 3. Run this SQL:
 
 ```sql
--- Insert test proposals
+-- Insert test proposals into process_events table
+-- Note: Using gen_random_uuid() for id field, and simple strings for user_id
 INSERT INTO process_events (
-  id, event_name, event_type, event_metadata, user_id, workflow_id
+  event_name, event_type, status, metadata, user_id, workflow_id
 ) VALUES 
-  ('test-pending-001', 'code_generation', 'ai_event', '{"status": "pending"}'::jsonb, 'test-user-1', 'wf-001'),
-  ('test-pending-002', 'code_review', 'ai_event', '{"status": "pending"}'::jsonb, 'test-user-2', 'wf-002'),
-  ('test-approved-001', 'deployment', 'ai_event', '{"status": "approved"}'::jsonb, 'test-user-3', 'wf-003'),
-  ('test-rejected-001', 'quality_check', 'ai_event', '{"status": "rejected"}'::jsonb, 'test-user-4', 'wf-004');
+  ('code_generation_requested', 'ai_event', 'pending', '{"description": "Generate user authentication service", "language": "python"}'::jsonb, 'test-user-1', 'wf-pending-001'),
+  ('code_review_requested', 'ai_event', 'pending', '{"description": "Review API endpoints for security", "language": "typescript"}'::jsonb, 'test-user-2', 'wf-pending-002'),
+  ('refactor_requested', 'ai_event', 'pending', '{"description": "Optimize database queries", "language": "sql"}'::jsonb, 'test-user-3', 'wf-pending-003'),
+  ('deployment_completed', 'ai_event', 'approved', '{"description": "Deploy to production", "environment": "production"}'::jsonb, 'test-user-4', 'wf-approved-001'),
+  ('test_suite_passed', 'ai_event', 'approved', '{"description": "All unit tests passed", "coverage": "95%"}'::jsonb, 'test-user-5', 'wf-approved-002'),
+  ('code_quality_check_failed', 'ai_event', 'rejected', '{"description": "Linting errors detected", "errors": 15}'::jsonb, 'test-user-6', 'wf-rejected-001'),
+  ('security_scan_failed', 'ai_event', 'rejected', '{"description": "Security vulnerabilities found", "vulnerabilities": 3}'::jsonb, 'test-user-7', 'wf-rejected-002'),
+  ('ai_model_inference', 'ai_event', 'processing', '{"description": "Running AI model", "progress": "50%"}'::jsonb, 'test-user-8', 'wf-processing-001');
+
+-- Verify the data was inserted
+SELECT 
+  id, 
+  event_name, 
+  status, 
+  user_id, 
+  workflow_id,
+  metadata->>'description' as description,
+  event_timestamp
+FROM process_events 
+WHERE user_id SIMILAR TO 'test-user-%'
+ORDER BY status, event_name;
 ```
 
 ---
@@ -57,9 +75,10 @@ INSERT INTO process_events (
 1. Open the Matrix Grid page
 2. Verify proposals are displayed in the grid
 3. Check status badges (color-coded):
-   - Pending = Yellow
-   - Approved = Green
-   - Rejected = Red
+   - Started = Yellow (in progress)
+   - Completed = Green (approved)
+   - Failed = Red (rejected)
+   - Cancelled = Gray
 4. Verify all columns display data:
    - ID
    - Workflow

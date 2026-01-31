@@ -5,12 +5,17 @@
  * AG Grid with Supabase integration and Temporal signals
  */
 
-import { useCallback, useMemo, useRef, useEffect } from 'react'
+import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
+import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 import type { ColDef } from 'ag-grid-community'
+// AG Grid CSS for legacy theme mode
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
+
+// Register AG Grid modules
+ModuleRegistry.registerModules([AllCommunityModule])
 import { useProposalStore } from '@/store/useProposalStore'
 import { useUIStore } from '@/store/useUIStore'
 import { useRealtimeProposals } from '@/hooks/useRealtimeProposals'
@@ -20,12 +25,12 @@ type ProcessEvent = Database['public']['Tables']['process_events']['Row']
 
 // Status badge renderer
 function StatusCellRenderer(props: { value: any; data: ProcessEvent }) {
-  const status = props.data.event_metadata?.status || 'unknown'
+  const status = props.data.status || 'unknown'
   const colors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    approved: 'bg-green-100 text-green-700',
-    rejected: 'bg-red-100 text-red-700',
-    processing: 'bg-blue-100 text-blue-700',
+    started: 'bg-yellow-100 text-yellow-700',
+    completed: 'bg-green-100 text-green-700',
+    failed: 'bg-red-100 text-red-700',
+    cancelled: 'bg-gray-100 text-gray-700',
     unknown: 'bg-gray-100 text-gray-700',
   }
 
@@ -55,11 +60,16 @@ function TimestampCellRenderer(props: { value: string }) {
   )
 }
 
-// Actions cell renderer
-function ActionsCellRenderer(props: { data: ProcessEvent }) {
-  const { addNotification } = useUIStore()
-  const { updateProposal } = useProposalStore()
-  const [loading, setLoading] = React.useState(false)
+// Actions cell renderer - Wrapper component that can use hooks
+const ActionsCellRenderer = (props: { data: ProcessEvent }) => {
+  return <ActionsButtons data={props.data} />
+}
+
+// Separate component that uses hooks
+function ActionsButtons({ data }: { data: ProcessEvent }) {
+  const addNotification = useUIStore((state) => state.addNotification)
+  const updateProposal = useProposalStore((state) => state.updateProposal)
+  const [loading, setLoading] = useState(false)
 
   const handleAction = async (action: 'approve' | 'reject') => {
     setLoading(true)
@@ -70,10 +80,10 @@ function ActionsCellRenderer(props: { data: ProcessEvent }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workflowId: props.data.workflow_id || `workflow-${props.data.id}`,
+          workflowId: data.workflow_id || `workflow-${data.id}`,
           signalName: action === 'approve' ? 'approve_signal' : 'reject_signal',
           signalArgs: {
-            proposalId: props.data.id,
+            proposalId: data.id,
             userId: 'current-user',
             action,
             timestamp: new Date().toISOString(),
@@ -81,17 +91,22 @@ function ActionsCellRenderer(props: { data: ProcessEvent }) {
         }),
       })
 
+      let errorMessage = 'Failed to send signal'
+      
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to send signal')
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.message || errorMessage
+        } catch {
+          // If we can't parse JSON, use status text
+          errorMessage = response.statusText || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
       // Update local state
-      await updateProposal(props.data.id, {
-        event_metadata: {
-          ...props.data.event_metadata,
-          status: action === 'approve' ? 'approved' : 'rejected',
-        },
+      await updateProposal(data.id, {
+        status: action === 'approve' ? 'completed' : 'failed',
       })
 
       addNotification({
@@ -99,11 +114,12 @@ function ActionsCellRenderer(props: { data: ProcessEvent }) {
         message: `Proposal ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
         duration: 3000,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Action error:', error)
+      const message = error instanceof Error ? error.message : 'Failed to process action'
       addNotification({
         type: 'error',
-        message: error.message || 'Failed to process action',
+        message,
         duration: 5000,
       })
     } finally {
@@ -111,8 +127,8 @@ function ActionsCellRenderer(props: { data: ProcessEvent }) {
     }
   }
 
-  const status = props.data.event_metadata?.status
-  const isPending = status === 'pending' || !status
+  const status = data.status
+  const isPending = status === 'started' || !status
 
   if (!isPending) {
     return <span className="text-sm text-gray-400">-</span>
@@ -144,16 +160,18 @@ function ActionsCellRenderer(props: { data: ProcessEvent }) {
   )
 }
 
-// Import React for useState in cell renderer
-import React from 'react'
-
 export function MatrixGridV2() {
   const gridRef = useRef<AgGridReact>(null)
   const { proposals, loading, error } = useProposalStore()
   const { addNotification, openModal } = useUIStore()
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime updates (re-enabled!)
   useRealtimeProposals()
+
+  // Initial fetch on mount
+  useEffect(() => {
+    useProposalStore.getState().fetchProposals()
+  }, [])
 
   // Handle row click to open modal
   const onRowClicked = useCallback(
@@ -175,11 +193,11 @@ export function MatrixGridV2() {
         sortable: true,
       },
       {
-        field: 'event_metadata',
+        field: 'status',
         headerName: 'Status',
         width: 130,
         cellRenderer: StatusCellRenderer,
-        filter: 'agSetColumnFilter',
+        filter: true,
         sortable: true,
       },
       {
@@ -197,7 +215,7 @@ export function MatrixGridV2() {
         filter: true,
       },
       {
-        field: 'created_at',
+        field: 'event_timestamp',
         headerName: 'Created',
         width: 180,
         cellRenderer: TimestampCellRenderer,
@@ -282,6 +300,7 @@ export function MatrixGridV2() {
           loading={loading}
           onRowClicked={onRowClicked}
           rowClass="cursor-pointer"
+          theme="legacy"
         />
       </div>
     </div>

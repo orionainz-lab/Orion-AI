@@ -12,17 +12,17 @@ import { createClient } from '@/lib/supabase/client'
 
 interface Stats {
   total: number
-  approved: number
-  pending: number
-  rejected: number
+  completed: number
+  started: number
+  failed: number
 }
 
 export default function Home() {
   const [stats, setStats] = useState<Stats>({
     total: 0,
-    approved: 0,
-    pending: 0,
-    rejected: 0,
+    completed: 0,
+    started: 0,
+    failed: 0,
   })
   const [loading, setLoading] = useState(true)
 
@@ -36,29 +36,29 @@ export default function Home() {
           .from('process_events')
           .select('*', { count: 'exact', head: true })
 
-        // Get approved count
-        const { count: approved } = await supabase
+        // Get completed count
+        const { count: completed } = await supabase
           .from('process_events')
           .select('*', { count: 'exact', head: true })
-          .eq('event_metadata->>status', 'approved')
+          .eq('status', 'completed')
 
-        // Get pending count
-        const { count: pending } = await supabase
+        // Get started count
+        const { count: started } = await supabase
           .from('process_events')
           .select('*', { count: 'exact', head: true })
-          .eq('event_metadata->>status', 'pending')
+          .eq('status', 'started')
 
-        // Get rejected count
-        const { count: rejected } = await supabase
+        // Get failed count
+        const { count: failed } = await supabase
           .from('process_events')
           .select('*', { count: 'exact', head: true })
-          .eq('event_metadata->>status', 'rejected')
+          .eq('status', 'failed')
 
         setStats({
           total: total || 0,
-          approved: approved || 0,
-          pending: pending || 0,
-          rejected: rejected || 0,
+          completed: completed || 0,
+          started: started || 0,
+          failed: failed || 0,
         })
       } catch (error) {
         console.error('Error fetching stats:', error)
@@ -72,9 +72,9 @@ export default function Home() {
 
   const statCards = [
     { name: 'Total Proposals', value: stats.total, icon: Activity, color: 'blue' },
-    { name: 'Approved', value: stats.approved, icon: CheckCircle, color: 'green' },
-    { name: 'Pending', value: stats.pending, icon: Clock, color: 'yellow' },
-    { name: 'Rejected', value: stats.rejected, icon: XCircle, color: 'red' },
+    { name: 'Completed', value: stats.completed, icon: CheckCircle, color: 'green' },
+    { name: 'In Progress', value: stats.started, icon: Clock, color: 'yellow' },
+    { name: 'Failed', value: stats.failed, icon: XCircle, color: 'red' },
   ]
 
   return (

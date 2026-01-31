@@ -23,66 +23,66 @@ print(f"\n[INFO] Connected to Supabase: {SUPABASE_URL}")
 # Test proposals data
 test_proposals = [
     {
-        'id': 'test-pending-001',
         'event_name': 'code_generation_requested',
         'event_type': 'ai_event',
-        'event_metadata': {'status': 'pending', 'description': 'Generate authentication service', 'language': 'python'},
+        'status': 'pending',
+        'metadata': {'description': 'Generate authentication service', 'language': 'python'},
         'user_id': 'test-user-001',
         'workflow_id': 'workflow-pending-001',
     },
     {
-        'id': 'test-pending-002',
         'event_name': 'code_review_requested',
         'event_type': 'ai_event',
-        'event_metadata': {'status': 'pending', 'description': 'Review API endpoints', 'language': 'typescript'},
+        'status': 'pending',
+        'metadata': {'description': 'Review API endpoints', 'language': 'typescript'},
         'user_id': 'test-user-002',
         'workflow_id': 'workflow-pending-002',
     },
     {
-        'id': 'test-pending-003',
         'event_name': 'refactor_requested',
         'event_type': 'ai_event',
-        'event_metadata': {'status': 'pending', 'description': 'Optimize database queries', 'language': 'sql'},
+        'status': 'pending',
+        'metadata': {'description': 'Optimize database queries', 'language': 'sql'},
         'user_id': 'test-user-003',
         'workflow_id': 'workflow-pending-003',
     },
     {
-        'id': 'test-approved-001',
         'event_name': 'deployment_completed',
         'event_type': 'ai_event',
-        'event_metadata': {'status': 'approved', 'description': 'Deploy to production', 'environment': 'production'},
+        'status': 'approved',
+        'metadata': {'description': 'Deploy to production', 'environment': 'production'},
         'user_id': 'test-user-004',
         'workflow_id': 'workflow-approved-001',
     },
     {
-        'id': 'test-approved-002',
         'event_name': 'test_suite_passed',
         'event_type': 'ai_event',
-        'event_metadata': {'status': 'approved', 'description': 'All unit tests passed', 'coverage': '95%'},
+        'status': 'approved',
+        'metadata': {'description': 'All unit tests passed', 'coverage': '95%'},
         'user_id': 'test-user-005',
         'workflow_id': 'workflow-approved-002',
     },
     {
-        'id': 'test-rejected-001',
         'event_name': 'code_quality_check_failed',
         'event_type': 'ai_event',
-        'event_metadata': {'status': 'rejected', 'description': 'Linting errors detected', 'errors': 15},
+        'status': 'rejected',
+        'metadata': {'description': 'Linting errors detected', 'errors': 15},
         'user_id': 'test-user-006',
         'workflow_id': 'workflow-rejected-001',
     },
     {
-        'id': 'test-rejected-002',
         'event_name': 'security_scan_failed',
         'event_type': 'ai_event',
-        'event_metadata': {'status': 'rejected', 'description': 'Security vulnerabilities found', 'vulnerabilities': 3},
+        'status': 'rejected',
+        'metadata': {'description': 'Security vulnerabilities found', 'vulnerabilities': 3},
         'user_id': 'test-user-007',
         'workflow_id': 'workflow-rejected-002',
     },
     {
-        'id': 'test-processing-001',
         'event_name': 'ai_model_inference',
         'event_type': 'ai_event',
-        'event_metadata': {'status': 'processing', 'description': 'Running AI model', 'progress': '50%'},
+        'status': 'processing',
+        'metadata': {'description': 'Running AI model', 'progress': '50%'},
         'user_id': 'test-user-008',
         'workflow_id': 'workflow-processing-001',
     },
@@ -95,11 +95,12 @@ failed_count = 0
 
 for proposal in test_proposals:
     try:
-        result = supabase.table('process_events').upsert(proposal).execute()
-        print(f"[SUCCESS] Inserted: {proposal['id']} ({proposal['event_metadata']['status']})")
+        # Use insert instead of upsert to let the database generate the ID
+        result = supabase.table('process_events').insert(proposal).execute()
+        print(f"[SUCCESS] Inserted: {proposal['event_name']} ({proposal['status']})")
         inserted_count += 1
     except Exception as e:
-        print(f"[ERROR] Failed to insert {proposal['id']}: {str(e)}")
+        print(f"[ERROR] Failed to insert {proposal['event_name']}: {str(e)}")
         failed_count += 1
 
 print(f"\n[SUMMARY] Inserted: {inserted_count}, Failed: {failed_count}")
@@ -117,7 +118,7 @@ try:
     # Count by status
     status_counts = {}
     for item in result.data:
-        status = item.get('event_metadata', {}).get('status', 'unknown')
+        status = item.get('status', 'unknown')
         status_counts[status] = status_counts.get(status, 0) + 1
     
     print("\n[STATUS BREAKDOWN]")

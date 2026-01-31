@@ -5,14 +5,36 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { z } from 'zod'
 
-// Validation schema
-const SignalRequestSchema = z.object({
-  workflowId: z.string().min(1, 'Workflow ID is required'),
-  signalName: z.string().min(1, 'Signal name is required'),
-  signalArgs: z.record(z.any()).optional().default({}),
-})
+// Simple validation function (no Zod dependency)
+function validateSignalRequest(body: unknown): { 
+  valid: boolean
+  data?: { workflowId: string; signalName: string; signalArgs: Record<string, unknown> }
+  error?: string 
+} {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Invalid request body' }
+  }
+  
+  const { workflowId, signalName, signalArgs } = body as Record<string, unknown>
+  
+  if (!workflowId || typeof workflowId !== 'string' || workflowId.length === 0) {
+    return { valid: false, error: 'Workflow ID is required' }
+  }
+  
+  if (!signalName || typeof signalName !== 'string' || signalName.length === 0) {
+    return { valid: false, error: 'Signal name is required' }
+  }
+  
+  return {
+    valid: true,
+    data: {
+      workflowId,
+      signalName,
+      signalArgs: (signalArgs && typeof signalArgs === 'object' ? signalArgs : {}) as Record<string, unknown>
+    }
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,19 +53,19 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse and validate request body
     const body = await request.json()
-    const validationResult = SignalRequestSchema.safeParse(body)
+    const validationResult = validateSignalRequest(body)
 
-    if (!validationResult.success) {
+    if (!validationResult.valid) {
       return NextResponse.json(
         {
           error: 'Invalid request',
-          details: validationResult.error.errors,
+          message: validationResult.error,
         },
         { status: 400 }
       )
     }
 
-    const { workflowId, signalName, signalArgs } = validationResult.data
+    const { workflowId, signalName, signalArgs } = validationResult.data!
 
     // 3. Connect to Temporal
     // Note: @temporalio/client is server-side only

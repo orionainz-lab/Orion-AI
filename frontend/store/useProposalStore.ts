@@ -44,12 +44,12 @@ export const useProposalStore = create<ProposalStore>((set, get) => ({
       let query = supabase
         .from('process_events')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('event_timestamp', { ascending: false })
         .limit(1000)
 
       // Apply filters
       if (filter.status) {
-        query = query.eq('event_metadata->>status', filter.status)
+        query = query.eq('status', filter.status)
       }
       if (filter.eventType) {
         query = query.eq('event_type', filter.eventType)

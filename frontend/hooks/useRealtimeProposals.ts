@@ -64,12 +64,12 @@ export function useRealtimeProposals() {
           }))
 
           // Show notification for status changes
-          const oldStatus = (payload.old as ProcessEvent).event_metadata
-          const newStatus = updatedProposal.event_metadata
-          if (JSON.stringify(oldStatus) !== JSON.stringify(newStatus)) {
+          const oldStatus = (payload.old as ProcessEvent).status
+          const newStatus = updatedProposal.status
+          if (oldStatus !== newStatus) {
             addNotification({
               type: 'success',
-              message: `Proposal ${updatedProposal.id} updated`,
+              message: `Proposal ${updatedProposal.id} status changed to ${newStatus}`,
               duration: 3000,
             })
           }

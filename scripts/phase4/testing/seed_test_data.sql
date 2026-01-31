@@ -10,37 +10,37 @@
 
 -- Insert Pending Proposals (for Approve/Reject testing)
 INSERT INTO process_events (
-  id,
   event_name,
   event_type,
-  event_metadata,
+  status,
+  metadata,
   user_id,
   workflow_id,
-  created_at
+  event_timestamp
 ) VALUES 
 (
-  'test-pending-001',
   'code_generation_requested',
   'ai_event',
-  '{"status": "pending", "description": "Generate authentication service", "language": "python"}'::jsonb,
+  'pending',
+  '{"description": "Generate authentication service", "language": "python", "priority": "high"}'::jsonb,
   'test-user-001',
   'workflow-pending-001',
   NOW() - INTERVAL '2 hours'
 ),
 (
-  'test-pending-002',
   'code_review_requested',
   'ai_event',
-  '{"status": "pending", "description": "Review API endpoints", "language": "typescript"}'::jsonb,
+  'pending',
+  '{"description": "Review API endpoints", "language": "typescript", "files": 15}'::jsonb,
   'test-user-002',
   'workflow-pending-002',
   NOW() - INTERVAL '1 hour'
 ),
 (
-  'test-pending-003',
   'refactor_requested',
   'ai_event',
-  '{"status": "pending", "description": "Optimize database queries", "language": "sql"}'::jsonb,
+  'pending',
+  '{"description": "Optimize database queries", "language": "sql", "tables": 5}'::jsonb,
   'test-user-003',
   'workflow-pending-003',
   NOW() - INTERVAL '30 minutes'
@@ -48,28 +48,28 @@ INSERT INTO process_events (
 
 -- Insert Approved Proposals
 INSERT INTO process_events (
-  id,
   event_name,
   event_type,
-  event_metadata,
+  status,
+  metadata,
   user_id,
   workflow_id,
-  created_at
+  event_timestamp
 ) VALUES 
 (
-  'test-approved-001',
   'deployment_completed',
   'ai_event',
-  '{"status": "approved", "description": "Deploy to production", "environment": "production"}'::jsonb,
+  'approved',
+  '{"description": "Deploy to production", "environment": "production", "version": "1.2.0"}'::jsonb,
   'test-user-004',
   'workflow-approved-001',
   NOW() - INTERVAL '3 hours'
 ),
 (
-  'test-approved-002',
   'test_suite_passed',
   'ai_event',
-  '{"status": "approved", "description": "All unit tests passed", "coverage": "95%"}'::jsonb,
+  'approved',
+  '{"description": "All unit tests passed", "coverage": "95%", "tests": 142}'::jsonb,
   'test-user-005',
   'workflow-approved-002',
   NOW() - INTERVAL '4 hours'
@@ -77,28 +77,28 @@ INSERT INTO process_events (
 
 -- Insert Rejected Proposals
 INSERT INTO process_events (
-  id,
   event_name,
   event_type,
-  event_metadata,
+  status,
+  metadata,
   user_id,
   workflow_id,
-  created_at
+  event_timestamp
 ) VALUES 
 (
-  'test-rejected-001',
   'code_quality_check_failed',
   'ai_event',
-  '{"status": "rejected", "description": "Linting errors detected", "errors": 15}'::jsonb,
+  'rejected',
+  '{"description": "Linting errors detected", "errors": 15, "severity": "high"}'::jsonb,
   'test-user-006',
   'workflow-rejected-001',
   NOW() - INTERVAL '5 hours'
 ),
 (
-  'test-rejected-002',
   'security_scan_failed',
   'ai_event',
-  '{"status": "rejected", "description": "Security vulnerabilities found", "vulnerabilities": 3}'::jsonb,
+  'rejected',
+  '{"description": "Security vulnerabilities found", "vulnerabilities": 3, "critical": 1}'::jsonb,
   'test-user-007',
   'workflow-rejected-002',
   NOW() - INTERVAL '6 hours'
@@ -106,28 +106,28 @@ INSERT INTO process_events (
 
 -- Insert Processing Proposals
 INSERT INTO process_events (
-  id,
   event_name,
   event_type,
-  event_metadata,
+  status,
+  metadata,
   user_id,
   workflow_id,
-  created_at
+  event_timestamp
 ) VALUES 
 (
-  'test-processing-001',
   'ai_model_inference',
   'ai_event',
-  '{"status": "processing", "description": "Running AI model", "progress": "50%"}'::jsonb,
+  'processing',
+  '{"description": "Running AI model", "progress": "50%", "model": "claude-4-sonnet"}'::jsonb,
   'test-user-008',
   'workflow-processing-001',
   NOW() - INTERVAL '10 minutes'
 ),
 (
-  'test-processing-002',
   'data_analysis',
   'ai_event',
-  '{"status": "processing", "description": "Analyzing codebase", "progress": "75%"}'::jsonb,
+  'processing',
+  '{"description": "Analyzing codebase", "progress": "75%", "files_analyzed": 450}'::jsonb,
   'test-user-009',
   'workflow-processing-002',
   NOW() - INTERVAL '5 minutes'
@@ -135,21 +135,22 @@ INSERT INTO process_events (
 
 -- Verify insertion
 SELECT 
-  event_metadata->>'status' as status,
+  status,
   COUNT(*) as count
 FROM process_events
-WHERE user_id LIKE 'test-user-%'
-GROUP BY event_metadata->>'status'
+WHERE user_id SIMILAR TO 'test-user-%'
+GROUP BY status
 ORDER BY status;
 
 -- Show all test data
 SELECT 
   id,
   event_name,
-  event_metadata->>'status' as status,
+  status,
   user_id,
   workflow_id,
-  created_at
+  metadata->>'description' as description,
+  event_timestamp
 FROM process_events
-WHERE user_id LIKE 'test-user-%'
-ORDER BY created_at DESC;
+WHERE user_id SIMILAR TO 'test-user-%'
+ORDER BY event_timestamp DESC;
