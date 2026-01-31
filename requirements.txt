@@ -96,3 +96,24 @@ jinja2>=3.2.0
 # Chart.js support (optional, frontend only)
 # charting dependencies handled in frontend/package.json
 
+# ===========================================
+# PHASE 6C: ENTERPRISE FEATURES
+# ===========================================
+# Redis for rate limiting (async client)
+redis>=5.0.0
+
+# Async HTTP client for SSO, health checks, and external services
+httpx>=0.25.0
+
+# File upload support for branding assets
+python-multipart>=0.0.6
+
+# JWT handling for SSO tokens (already included in Phase 5)
+# python-jose[cryptography]>=3.5.0
+
+# SAML support (optional - for production SAML implementation)
+# python3-saml>=1.15.0
+
+# Advanced JWT verification (optional - for production OIDC)
+# pyjwt[crypto]>=2.8.0
+
